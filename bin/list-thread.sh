@@ -1,0 +1,1 @@
+ps aux| grep dsdgen| grep -v grep | awk '{for (i=3; i<=10; i++) $i=""; print $0}'

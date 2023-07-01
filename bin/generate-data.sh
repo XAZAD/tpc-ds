@@ -1,67 +1,59 @@
 #!/bin/bash
+function usage {
+    echo ""
+    echo "usage: generate-data.sh --mode String --size Int"
+    echo ""
+    echo "  --mode string   mode of work. Supported values:"
+    echo "                                ${!tpcGenerateModes[@]}"
+    echo "  --size int      Required size of dataset in Gb."
+    echo ""
+}
+
+function die {
+    printf "Script failed: %s\n\n" "$1"
+    exit 1
+}
+
+while [ $# -gt 0 ]; do
+    if [[ $1 == "--help" ]]; then
+        usage
+        exit 0
+    elif [[ $1 == "--"* ]]; then
+        v="${1/--/}"
+        declare "$v"="$2"
+        shift
+    fi
+    shift
+done
+
+if [[ -z $mode ]]; then
+    usage
+    die "Missing parameter --mode"
+
+
+elif [[ -z $size ]]; then
+    usage
+    die "Missing parameter --size"
+fi
+
 
 echo you can define parameters via env vars: OUTPUT_DIR, PARALLEL_STREAMS_COUNT
 
+unset $TPC_WORKING_DIR
 TPC_SCRIPT_PATH="$(cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
-TPC_WORKING_DIR=$(realpath $TPC_SCRIPT_PATH/..)
+export TPC_WORKING_DIR=$(realpath $TPC_SCRIPT_PATH/..)
 echo Working dir: $TPC_WORKING_DIR
 
-if [ "$#" != 1 ]; then
-    echo "Missing SCALE factor param (GB)."
-    exit 1
-fi
+#Add new mode here
+declare -A tpcGenerateModes=(
+[GCP]="/GCP/generate_data.sh $size" 
+[local]="/local/generate-data.sh $size" 
+)
 
-
-
-if [ -z "$OUTPUT_DIR" ]; then
-    OUTPUT_DIR=$TPC_WORKING_DIR/generated-data
-    echo Using default OUTPUT_DIR=$OUTPUT_DIR
-else
-    OUTPUT_DIR=$(realpath $OUTPUT_DIR)
-    echo Set OUTPUT_DIR=$OUTPUT_DIR
-fi
-
-find $OUTPUT_DIR  -maxdepth 0 -empty -delete
-
-if [ -d $OUTPUT_DIR ]; then
-    echo "It looks like data already generated. Remove/rename the '$OUTPUT_DIR' directory to generate it again."
-    exit 1
+if [[ -v tpcGenerateModes[$mode] ]]
+then
+    exec $TPC_WORKING_DIR/bin/${tpcGenerateModes[$mode]}
 else 
-    mkdir $OUTPUT_DIR
+    usage
+    die "Bad parameter vlue --mode"
 fi
-
-SCALE=$1
-SUFFIX="_$(printf "%04d" $SCALE).dat"
-
-if [ -z "$PARALLEL_STREAMS_COUNT" ]; then
-    PARALLEL_STREAMS_COUNT=64
-    echo Using default PARALLEL_STREAMS_COUNT=$PARALLEL_STREAMS_COUNT
-else
-    echo Set PARALLEL_STREAMS_COUNT=$PARALLEL_STREAMS_COUNT
-fi
-
-cd $TPC_WORKING_DIR/tools
-
-for ((i = 1; i <= $PARALLEL_STREAMS_COUNT; i++)); do
-    #echo Started thread_$i
-    nohup ./dsdgen -scale $SCALE -dir $OUTPUT_DIR -parallel $PARALLEL_STREAMS_COUNT -child $i > /dev/null 2>&1 &
-       
-    #& pids[${i}]=$!
-done
-
-echo
-echo Threads list:
-echo
-ps aux | grep dsdgen| awk '{for (i=3; i<=10; i++) $i=""; print $0}'
-
-# for p in ${pids[*]}
-#     echo $p
-# done
-# FOO_PID=$!
-
-# echo $FOO_PID
-
-# # wait for generating be completed
-# for pid in ${pids[*]}; do
-#     wait $pid
-# done
