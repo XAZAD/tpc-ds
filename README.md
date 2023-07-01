@@ -4,6 +4,9 @@
 ```bash
 # Ubuntu
 sudo apt install gcc g++ g++-9 gcc-9 make yacc flex
+
+# Ubuntu 20.04WSL
+sudo apt-get install gcc g++ g++-9 gcc-9 make bison flex
 ```
 
 ## Build tools. It needs gcc version 9

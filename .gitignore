@@ -20,5 +20,5 @@ tools/tpcds.idx.h
 tools/y.output
 tools/y.tab.c
 tools/y.tab.h
-
+tools/nohup.out
 
