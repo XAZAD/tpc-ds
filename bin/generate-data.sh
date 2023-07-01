@@ -55,5 +55,5 @@ then
     exec $TPC_WORKING_DIR/bin/${tpcGenerateModes[$mode]}
 else 
     usage
-    die "Bad parameter vlue --mode"
+    die "Bad parameter value --mode"
 fi
