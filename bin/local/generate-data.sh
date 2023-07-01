@@ -18,7 +18,8 @@ find $OUTPUT_DIR -maxdepth 0 -empty -delete 2>/dev/null
 SCALE=$1
 
 if [ -z "$PARALLEL_STREAMS_COUNT" ]; then
-    PARALLEL_STREAMS_COUNT=$(grep -c ^processor /proc/cpuinfo)
+    cpuNum=$(grep -c ^processor /proc/cpuinfo)
+    PARALLEL_STREAMS_COUNT=$((cpuNum*2))
     echo Using default PARALLEL_STREAMS_COUNT=$PARALLEL_STREAMS_COUNT
 else
     echo Set PARALLEL_STREAMS_COUNT=$PARALLEL_STREAMS_COUNT
@@ -48,7 +49,7 @@ function checkDataAndDelete {
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             rm -rf $OUTPUT_DIR
             sleep 1
-            checkDataAndDelete            
+            checkDataAndDelete
         else
             echo GoodBye
             exit 1
@@ -69,9 +70,28 @@ function generate {
 }
 
 function lookup {
+    function infLookup {
+        while [[ $($TPC_WORKING_DIR/bin/list-thread.sh) ]]
+        do
+            clear
+            currentSize=$(du -h $OUTPUT_DIR | awk '{print $1}')
+            (exec $TPC_WORKING_DIR/bin/list-thread.sh)
+            echo CurrentSize: $currentSize
+            sleep 5
+        done
+        echo Finished
+    }
+
     echo
     echo Threads List:
-    exec $TPC_WORKING_DIR/bin/list-thread.sh
+    (exec $TPC_WORKING_DIR/bin/list-thread.sh)
+    read -p "Do you want to interactively refresh status? [Y/N] " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        infLookup
+    else
+        echo GoodBye, you can use list-threads.sh to check it anytime.
+    fi
 
 }
 cd $TPC_WORKING_DIR/tools
